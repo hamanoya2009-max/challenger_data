@@ -216,9 +216,11 @@ async function processImages() {
     log('GAS / Claude APIに送信中...', 'info');
 
     // GASにPOST
+    // GASはCORSを完全サポートしないためno-corsではなく
+    // Content-Typeをtext/plainにしてプリフライトを回避
     const response = await fetch(GAS_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ targetDate, images: imageDataList }),
       redirect: 'follow',
     });
