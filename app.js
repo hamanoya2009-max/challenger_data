@@ -215,20 +215,29 @@ async function processImages() {
 
     log('GAS / Claude APIに送信中...', 'info');
 
-    // GASにPOST（タイムアウト120秒）
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000);
-
-    const response = await fetch(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ targetDate, images: imageDataList }),
-      redirect: 'follow',
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-    const result = await response.json();
+    // GASにPOST（失敗時は最大3回自動リトライ）
+    let result = null;
+    let lastError = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        if (attempt > 1) {
+          log(`リトライ中... (${attempt}/3)`, 'info');
+          await new Promise(r => setTimeout(r, 2000));
+        }
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ targetDate, images: imageDataList }),
+          redirect: 'follow',
+        });
+        result = await response.json();
+        break; // 成功したらループを抜ける
+      } catch (e) {
+        lastError = e;
+        log(`通信エラー (${attempt}/3): ${e.message}`, 'error');
+      }
+    }
+    if (!result) throw lastError;
 
     const bar = document.getElementById('runProgress');
     if (bar) bar.style.width = '100%';
