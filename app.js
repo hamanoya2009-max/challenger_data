@@ -215,16 +215,19 @@ async function processImages() {
 
     log('GAS / Claude APIに送信中...', 'info');
 
-    // GASにPOST
-    // GASはCORSを完全サポートしないためno-corsではなく
-    // Content-Typeをtext/plainにしてプリフライトを回避
+    // GASにPOST（タイムアウト120秒）
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+
     const response = await fetch(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ targetDate, images: imageDataList }),
       redirect: 'follow',
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
     const result = await response.json();
 
     const bar = document.getElementById('runProgress');
