@@ -12,17 +12,18 @@ document.addEventListener('DOMContentLoaded', () => {
   initDate();
   initTabs();
   initDropzone();
+  initGraphDropzone();
   initSettings();
   initDateNav();
+  initGraphDateNav();
 });
 
 // ========================================
-// 日付初期化
+// 日付初期化（データ入力タブ）
 // ========================================
 function initDate() {
   const input = document.getElementById('targetDate');
   const today = new Date();
-  // 前日をデフォルトに（閉店後に入力する想定）
   today.setDate(today.getDate() - 1);
   input.value = formatDate(today);
 }
@@ -47,6 +48,26 @@ function shiftDate(delta) {
 }
 
 // ========================================
+// 日付初期化（グラフタブ）
+// ========================================
+function initGraphDateNav() {
+  const input = document.getElementById('gTargetDate');
+  const today = new Date();
+  today.setDate(today.getDate() - 1);
+  input.value = formatDate(today);
+
+  document.getElementById('gDatePrev').addEventListener('click', () => shiftGraphDate(-1));
+  document.getElementById('gDateNext').addEventListener('click', () => shiftGraphDate(1));
+}
+
+function shiftGraphDate(delta) {
+  const input = document.getElementById('gTargetDate');
+  const d = new Date(input.value + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  input.value = formatDate(d);
+}
+
+// ========================================
 // タブ切り替え
 // ========================================
 function initTabs() {
@@ -62,7 +83,7 @@ function initTabs() {
 }
 
 // ========================================
-// ドロップゾーン
+// ドロップゾーン（データ入力タブ）
 // ========================================
 let files = [];
 
@@ -123,11 +144,72 @@ function renderPreviews() {
 }
 
 // ========================================
-// ログ出力
+// ドロップゾーン（グラフタブ）
 // ========================================
-function log(msg, type = '') {
-  const area = document.getElementById('logArea');
-  const section = document.getElementById('logSection');
+let gFile = null;
+
+function initGraphDropzone() {
+  const dropzone = document.getElementById('gDropzone');
+  const fileInput = document.getElementById('gFileInput');
+
+  fileInput.addEventListener('change', e => {
+    if (e.target.files[0]) setGraphFile(e.target.files[0]);
+  });
+
+  dropzone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropzone.classList.add('drag-over');
+  });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('drag-over');
+    const f = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+    if (f) setGraphFile(f);
+  });
+
+  document.getElementById('gRunBtn').addEventListener('click', processGraphImage);
+}
+
+function setGraphFile(f) {
+  gFile = f;
+  renderGraphPreview();
+}
+
+function removeGraphFile() {
+  gFile = null;
+  renderGraphPreview();
+}
+
+function renderGraphPreview() {
+  const grid = document.getElementById('gPreviewGrid');
+  const badge = document.getElementById('gImgBadge');
+  const runBtn = document.getElementById('gRunBtn');
+
+  badge.textContent = gFile ? 1 : 0;
+  grid.innerHTML = '';
+
+  if (gFile) {
+    const url = URL.createObjectURL(gFile);
+    const item = document.createElement('div');
+    item.className = 'preview-item';
+    item.innerHTML = `
+      <img src="${url}" alt="${gFile.name}">
+      <button class="preview-remove" onclick="removeGraphFile()">×</button>
+      <div class="preview-badge">${gFile.name}</div>
+    `;
+    grid.appendChild(item);
+  }
+
+  runBtn.disabled = !gFile;
+}
+
+// ========================================
+// ログ出力（共通）
+// ========================================
+function log(msg, type = '', areaId = 'logArea', sectionId = 'logSection') {
+  const area = document.getElementById(areaId);
+  const section = document.getElementById(sectionId);
   section.style.display = 'block';
 
   const line = document.createElement('div');
@@ -138,13 +220,12 @@ function log(msg, type = '') {
   area.scrollTop = area.scrollHeight;
 }
 
-function clearLog() {
-  document.getElementById('logArea').innerHTML = '';
+function clearLog(areaId = 'logArea') {
+  document.getElementById(areaId).innerHTML = '';
 }
 
 function setStatus(status) {
   const dot = document.getElementById('statusDot');
-  const runBtn = document.getElementById('runBtn');
   const statusMap = {
     ready:      { text: '● READY',      cls: '' },
     processing: { text: '◉ PROCESSING', cls: 'processing' },
@@ -154,22 +235,29 @@ function setStatus(status) {
   const s = statusMap[status] || statusMap.ready;
   dot.textContent = s.text;
   dot.className = `header-status ${s.cls}`;
+}
 
-  if (status === 'processing') {
+function setRunBtn(btnId, progressId, isRunning, disabled = false) {
+  const runBtn = document.getElementById(btnId);
+  if (isRunning) {
     runBtn.classList.add('running');
-    runBtn.innerHTML = `<span class="run-icon">◉</span><span class="run-label">処理中...</span><div class="run-progress" id="runProgress"></div>`;
-    animateProgress();
+    runBtn.innerHTML = `<span class="run-icon">◉</span><span class="run-label">処理中...</span><div class="run-progress" id="${progressId}"></div>`;
+    animateProgress(progressId);
   } else {
     runBtn.classList.remove('running');
-    runBtn.innerHTML = `<span class="run-icon">▶</span><span class="run-label">ANALYZE &amp; WRITE TO SHEETS</span><div class="run-progress" id="runProgress"></div>`;
+    const label = btnId === 'runBtn'
+      ? 'ANALYZE &amp; WRITE TO SHEETS'
+      : 'READ GRAPH &amp; WRITE TO SHEETS';
+    runBtn.innerHTML = `<span class="run-icon">▶</span><span class="run-label">${label}</span><div class="run-progress" id="${progressId}"></div>`;
+    runBtn.disabled = disabled;
   }
 }
 
-function animateProgress() {
+function animateProgress(progressId) {
   let w = 0;
   const interval = setInterval(() => {
     w = Math.min(w + Math.random() * 8, 85);
-    const bar = document.getElementById('runProgress');
+    const bar = document.getElementById(progressId);
     if (bar) bar.style.width = w + '%';
     else clearInterval(interval);
   }, 300);
@@ -189,7 +277,36 @@ function fileToBase64(file) {
 }
 
 // ========================================
-// メイン処理：画像をGASに送信
+// GASへのPOST（リトライ付き）
+// ========================================
+async function postToGAS(body, logAreaId = 'logArea') {
+  let result = null;
+  let lastError = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      if (attempt > 1) {
+        log(`リトライ中... (${attempt}/3)`, 'info', logAreaId, logAreaId === 'logArea' ? 'logSection' : 'gLogSection');
+        await new Promise(r => setTimeout(r, 2000));
+      }
+      const response = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(body),
+        redirect: 'follow',
+      });
+      result = await response.json();
+      break;
+    } catch (e) {
+      lastError = e;
+      log(`通信エラー (${attempt}/3): ${e.message}`, 'error', logAreaId, logAreaId === 'logArea' ? 'logSection' : 'gLogSection');
+    }
+  }
+  if (!result) throw lastError;
+  return result;
+}
+
+// ========================================
+// メイン処理：台データ画像をGASに送信
 // ========================================
 async function processImages() {
   const targetDate = document.getElementById('targetDate').value;
@@ -197,15 +314,15 @@ async function processImages() {
   if (files.length === 0) { alert('画像を選択してください'); return; }
   if (!GAS_URL) { alert('設定タブでGASのURLを入力してください'); return; }
 
-  clearLog();
+  clearLog('logArea');
   setStatus('processing');
+  setRunBtn('runBtn', 'runProgress', true);
   document.getElementById('resultSection').style.display = 'none';
 
   log(`対象日: ${targetDate}`, 'info');
   log(`画像数: ${files.length}枚`, 'info');
 
   try {
-    // 画像をbase64に変換
     const imageDataList = [];
     for (const f of files) {
       log(`変換中: ${f.name}`);
@@ -215,29 +332,7 @@ async function processImages() {
 
     log('GAS / Claude APIに送信中...', 'info');
 
-    // GASにPOST（失敗時は最大3回自動リトライ）
-    let result = null;
-    let lastError = null;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        if (attempt > 1) {
-          log(`リトライ中... (${attempt}/3)`, 'info');
-          await new Promise(r => setTimeout(r, 2000));
-        }
-        const response = await fetch(GAS_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ targetDate, images: imageDataList }),
-          redirect: 'follow',
-        });
-        result = await response.json();
-        break; // 成功したらループを抜ける
-      } catch (e) {
-        lastError = e;
-        log(`通信エラー (${attempt}/3): ${e.message}`, 'error');
-      }
-    }
-    if (!result) throw lastError;
+    const result = await postToGAS({ targetDate, images: imageDataList }, 'logArea');
 
     const bar = document.getElementById('runProgress');
     if (bar) bar.style.width = '100%';
@@ -255,12 +350,67 @@ async function processImages() {
     log(`ERROR: ${err.message || err}`, 'error');
     setStatus('error');
   } finally {
-    document.getElementById('runBtn').disabled = files.length === 0;
+    setRunBtn('runBtn', 'runProgress', false, files.length === 0);
   }
 }
 
 // ========================================
-// 結果表示
+// グラフ処理：スランプグラフ画像をGASに送信
+// ========================================
+async function processGraphImage() {
+  const date = document.getElementById('gTargetDate').value;
+  const machineNo = document.getElementById('gMachineNo').value.trim();
+
+  if (!date) { alert('日付を選択してください'); return; }
+  if (!machineNo) { alert('台番号を入力してください'); return; }
+  if (!gFile) { alert('グラフ画像を選択してください'); return; }
+  if (!GAS_URL) { alert('設定タブでGASのURLを入力してください'); return; }
+
+  clearLog('gLogArea');
+  setStatus('processing');
+  setRunBtn('gRunBtn', 'gRunProgress', true);
+  document.getElementById('gResultSection').style.display = 'none';
+
+  log(`対象日: ${date}`, 'info', 'gLogArea', 'gLogSection');
+  log(`台番号: ${machineNo}`, 'info', 'gLogArea', 'gLogSection');
+  log(`ファイル: ${gFile.name}`, 'info', 'gLogArea', 'gLogSection');
+
+  try {
+    log('画像をbase64に変換中...', 'info', 'gLogArea', 'gLogSection');
+    const b64 = await fileToBase64(gFile);
+
+    log('GAS / Claude APIに送信中...', 'info', 'gLogArea', 'gLogSection');
+
+    const result = await postToGAS({
+      action: 'uploadGraph',
+      date,
+      machineNo,
+      imageBase64: b64,
+      mimeType: gFile.type,
+    }, 'gLogArea');
+
+    const bar = document.getElementById('gRunProgress');
+    if (bar) bar.style.width = '100%';
+
+    if (result.success) {
+      log(`✓ ${result.message}`, 'success', 'gLogArea', 'gLogSection');
+      setStatus('success');
+      showGraphResult(result.summary);
+    } else {
+      log(`ERROR: ${result.error}`, 'error', 'gLogArea', 'gLogSection');
+      setStatus('error');
+    }
+
+  } catch (err) {
+    log(`ERROR: ${err.message || err}`, 'error', 'gLogArea', 'gLogSection');
+    setStatus('error');
+  } finally {
+    setRunBtn('gRunBtn', 'gRunProgress', false, !gFile);
+  }
+}
+
+// ========================================
+// 結果表示（台データ）
 // ========================================
 function showResult(data) {
   const section = document.getElementById('resultSection');
@@ -272,7 +422,6 @@ function showResult(data) {
     return;
   }
 
-  // 機種別にグループ化
   const grouped = {};
   data.forEach(row => {
     const key = row.machine || '不明';
@@ -311,6 +460,51 @@ function showResult(data) {
   });
 
   content.innerHTML = html;
+}
+
+// ========================================
+// 結果表示（グラフ）
+// ========================================
+function showGraphResult(summary) {
+  const section = document.getElementById('gResultSection');
+  const content = document.getElementById('gResultContent');
+  section.style.display = 'block';
+
+  if (!summary) {
+    content.innerHTML = '<div class="log-line">サマリーなし</div>';
+    return;
+  }
+
+  const endColor = summary.end >= 0 ? 'var(--accent3)' : 'var(--accent2)';
+
+  content.innerHTML = `
+    <div class="info-grid">
+      <div class="info-row">
+        <span class="info-key">機種名</span>
+        <span class="info-val">${summary.machine || '-'}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">総回転数</span>
+        <span class="info-val">${summary.total_g ? summary.total_g.toLocaleString() + 'G' : '-'}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">最大差枚</span>
+        <span class="info-val" style="color: var(--accent3)">+${summary.max ?? '-'}枚</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">最小差枚</span>
+        <span class="info-val" style="color: var(--accent2)">${summary.min ?? '-'}枚</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">終値</span>
+        <span class="info-val" style="color: ${endColor}; font-weight: bold">${summary.end >= 0 ? '+' : ''}${summary.end ?? '-'}枚</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">座標点数</span>
+        <span class="info-val">${summary.points ?? '-'}点</span>
+      </div>
+    </div>
+  `;
 }
 
 // ========================================
