@@ -35,6 +35,9 @@
       <button class="tab-btn active" data-tab="upload">
         <span class="tab-icon">↑</span> データ入力
       </button>
+      <button class="tab-btn" data-tab="graph">
+        <span class="tab-icon">〜</span> グラフ
+      </button>
       <button class="tab-btn" data-tab="history">
         <span class="tab-icon">≡</span> 履歴
       </button>
@@ -97,6 +100,72 @@
 
     </section>
 
+    <!-- タブ: グラフアップロード -->
+    <section class="tab-content" id="tab-graph">
+
+      <div class="section">
+        <div class="section-label">TARGET DATE</div>
+        <div class="date-row">
+          <button class="date-nav" id="gDatePrev">‹</button>
+          <input type="date" id="gTargetDate" class="date-input">
+          <button class="date-nav" id="gDateNext">›</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">台番号</div>
+        <input
+          type="number"
+          id="gMachineNo"
+          class="text-input"
+          placeholder="例: 1"
+          min="1"
+          max="167"
+          inputmode="numeric"
+        >
+        <div class="field-hint">ジャグラー台の台番号を入力（1〜167）</div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">
+          GRAPH SCREENSHOT
+          <span class="badge" id="gImgBadge">0</span>
+        </div>
+        <div class="dropzone" id="gDropzone">
+          <input type="file" id="gFileInput" accept="image/*">
+          <div class="dz-content">
+            <div class="dz-icon">
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                <polyline points="4,28 12,16 18,22 24,12 32,20" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="4" y1="32" x2="32" y2="32" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="dz-text">スランプグラフをドロップ</div>
+            <div class="dz-sub">タップして選択</div>
+            <div class="dz-hint">ジャグラーオンライン / 詳細データ画面</div>
+          </div>
+        </div>
+        <div class="preview-grid" id="gPreviewGrid"></div>
+      </div>
+
+      <button class="run-btn" id="gRunBtn" disabled>
+        <span class="run-icon">▶</span>
+        <span class="run-label">READ GRAPH &amp; WRITE TO SHEETS</span>
+        <div class="run-progress" id="gRunProgress"></div>
+      </button>
+
+      <div class="section" id="gLogSection" style="display:none">
+        <div class="section-label">PROCESS LOG</div>
+        <div class="log-terminal" id="gLogArea"></div>
+      </div>
+
+      <div class="section" id="gResultSection" style="display:none">
+        <div class="section-label">GRAPH SUMMARY</div>
+        <div id="gResultContent"></div>
+      </div>
+
+    </section>
+
     <!-- タブ: 履歴 -->
     <section class="tab-content" id="tab-history">
       <div class="section">
@@ -121,7 +190,7 @@
         <div class="info-grid">
           <div class="info-row">
             <span class="info-key">VERSION</span>
-            <span class="info-val">1.0.0</span>
+            <span class="info-val">1.1.0</span>
           </div>
           <div class="info-row">
             <span class="info-key">HALL</span>
