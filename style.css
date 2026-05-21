@@ -13,8 +13,8 @@
   --accent2:   #ff2d6b;
   --accent3:   #7fff00;
   --text:      #b8cce0;
-  --text-dim:  #3d4f63;
-  --text-mute: #1e2d3d;
+  --text-dim:  #7a9ab8;
+  --text-mute: #4a6680;
   --mono:      'Share Tech Mono', monospace;
   --sans:      'Zen Kaku Gothic New', sans-serif;
   --radius:    6px;
@@ -371,21 +371,22 @@ body {
 }
 .preview-remove {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 6px;
+  right: 6px;
   background: var(--accent2);
   color: white;
   border: none;
   border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  font-size: 11px;
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
   z-index: 1;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
 .preview-badge {
   position: absolute;
