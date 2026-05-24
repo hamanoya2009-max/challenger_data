@@ -6,6 +6,23 @@
 let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbwMliehrkydhGBzOqjfqKbVz7xpZzWyADa8xb7NmM2yNXrWYoO_WVr3raXeEBhd8i5iXw/exec';
 
 // ========================================
+// 有効台番号リスト（ジャグラー97台）
+// ========================================
+const VALID_MACHINES = [
+  1,2,3,5,6,7,8,10,11,12,13,15,16,         // NEO
+  17,18,20,21,22,23,25,26,27,28,            // GSS
+  30,31,32,33,35,36,37,38,50,51,52,         // UMJ
+  53,55,56,57,58,60,61,62,63,65,66,67,68,
+  70,71,72,73,75,76,77,78,80,81,82,83,85,  // GG3
+  86,87,88,100,101,102,103,105,106,         // MR
+  107,108,                                   // FK2
+  110,111,                                   // HP8
+  128,130,131,132,133,135,136,137,138,
+  150,151,152,153,155,156,157,158,
+  160,161,162,163,165,166,167               // MY5
+];
+
+// ========================================
 // 初期化
 // ========================================
 document.addEventListener('DOMContentLoaded', () => {
@@ -16,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSettings();
   initDateNav();
   initGraphDateNav();
+  initMachineNav();
 });
 
 // ========================================
@@ -65,6 +83,63 @@ function shiftGraphDate(delta) {
   const d = new Date(input.value + 'T00:00:00');
   d.setDate(d.getDate() + delta);
   input.value = formatDate(d);
+}
+
+// ========================================
+// 台番号ナビ
+// ========================================
+function initMachineNav() {
+  const input = document.getElementById('gMachineNo');
+
+  // 左右ボタンを台番号inputの隣に動的生成
+  const section = input.closest('.section');
+  const wrapper = document.createElement('div');
+  wrapper.className = 'date-row';
+
+  const prevBtn = document.createElement('button');
+  prevBtn.className = 'date-nav';
+  prevBtn.id = 'machineNavPrev';
+  prevBtn.textContent = '‹';
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'date-nav';
+  nextBtn.id = 'machineNavNext';
+  nextBtn.textContent = '›';
+
+  // inputをwrapperに移動
+  input.parentNode.insertBefore(wrapper, input);
+  wrapper.appendChild(prevBtn);
+  wrapper.appendChild(input);
+  wrapper.appendChild(nextBtn);
+  input.style.flex = '1';
+
+  prevBtn.addEventListener('click', () => shiftMachine(-1));
+  nextBtn.addEventListener('click', () => shiftMachine(1));
+}
+
+function shiftMachine(delta) {
+  const input = document.getElementById('gMachineNo');
+  const current = parseInt(input.value, 10);
+
+  if (isNaN(current)) {
+    // 未入力の場合はdelta>0なら先頭、delta<0なら末尾
+    input.value = delta > 0 ? VALID_MACHINES[0] : VALID_MACHINES[VALID_MACHINES.length - 1];
+    return;
+  }
+
+  const idx = VALID_MACHINES.indexOf(current);
+  if (idx === -1) {
+    // リスト外の値が入力されていたら最近傍に補正
+    const nearest = VALID_MACHINES.reduce((a, b) =>
+      Math.abs(b - current) < Math.abs(a - current) ? b : a
+    );
+    input.value = nearest;
+    return;
+  }
+
+  const newIdx = idx + delta;
+  if (newIdx < 0 || newIdx >= VALID_MACHINES.length) return; // 端では動かない
+  input.value = VALID_MACHINES[newIdx];
 }
 
 // ========================================
